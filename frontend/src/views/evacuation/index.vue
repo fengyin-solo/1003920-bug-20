@@ -75,29 +75,28 @@ import { computed, onMounted, ref } from 'vue'
 
 import {
   downloadEntries,
-  listEntries,
+  loadModulePage,
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
-import type { EntryRow } from '@/data/types'
+import type { EntryRow, ModuleStat } from '@/data/types'
 
 const meta = moduleMeta('evacuation')
 const columns = ["户号", "所属隐患点", "户主姓名", "家庭人口", "原住址", "安置方式", "安置地点", "搬迁状态"]
 const actions = ["签订协议", "完成搬迁", "确认安置"]
-const statuses = ["待动员", "已签约", "已搬迁", "已安置", "拒绝搬迁"]
-const stats = [{"label": "需搬迁户数", "value": 0}, {"label": "已搬迁户数", "value": 0}, {"label": "已安置户数", "value": 0}]
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
 const filterFields = columns.slice(0, 3)
-const statusSummary = computed(() =>
-  statuses.map((status: string) => ({
-    status,
-    count: rows.value.filter((row) => String(row.status) === status).length,
-  })),
-)
+const summary = ref<ModuleStat>({ created: 0, pending: 0, abnormal: 0, byStatus: [] })
+const stats = computed(() => [
+  { label: '登记总量', value: summary.value.created },
+  { label: '未结事项', value: summary.value.pending },
+  { label: '异常量', value: summary.value.abnormal },
+])
+const statusSummary = computed(() => summary.value.byStatus)
 
 function resetFilters() {
   filters.value = {}
@@ -112,22 +111,22 @@ function openCreate() {
   errorMessage.value = '搬迁安置户登记入口尚未接入审批流'
 }
 
-function runAction(action: string, row: EntryRow) {
+async function runAction(action: string, row: EntryRow) {
   errorMessage.value = ''
-  const result = applyAction(meta.key, Number(row.id), action)
+  const result = await applyAction(meta.key, Number(row.id), action, String(row.status))
+  reload()
   if (!result.ok) {
     errorMessage.value = result.message
-    return
   }
-  reload()
 }
 
 function reload() {
   errorMessage.value = ''
   try {
-    const payload = listEntries(meta.key, filters.value)
+    const payload = loadModulePage(meta.key, filters.value)
     rows.value = payload.items
     total.value = payload.total
+    summary.value = payload.summary
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '避险搬迁列表读取失败'
   }

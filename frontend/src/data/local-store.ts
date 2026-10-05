@@ -8,44 +8,77 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
 }
 
-function readStorage(): Record<string, EntryRow[]> {
-  const fallback = clone(SEED_ROWS)
-  if (typeof window === 'undefined' || !window.localStorage) {
-    return fallback
+function hasStorage(): boolean {
+  return typeof window !== 'undefined' && Boolean(window.localStorage)
+}
+
+// 非浏览器环境（类型检查、单测等）没有 localStorage，用内存兜底。
+let memoryFallback: Record<string, EntryRow[]> | null = null
+
+function seedRows(): Record<string, EntryRow[]> {
+  return clone(SEED_ROWS)
+}
+
+// 每次取数都直接读持久化快照，不在内存里另存一份旧账：
+// 总览、列表、待办清单、导出看到的都是同一批数据，别的标签页刚落库的改动也能立刻读到。
+export function allRows(): Record<string, EntryRow[]> {
+  if (!hasStorage()) {
+    if (memoryFallback === null) {
+      memoryFallback = seedRows()
+    }
+    return memoryFallback
   }
-  const raw = window.localStorage.getItem(STORAGE_KEY)
+  let raw: string | null = null
+  try {
+    raw = window.localStorage.getItem(STORAGE_KEY)
+  } catch {
+    // 存储被禁用时读也兜底，页面不崩，按种子数据展示。
+    return seedRows()
+  }
   if (!raw) {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(fallback))
-    return fallback
+    const seeded = seedRows()
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded))
+    } catch {
+      // 播种写不进去就算了，本次仍按种子数据返回。
+    }
+    return seeded
   }
   try {
     const parsed = JSON.parse(raw) as Record<string, EntryRow[]>
-    return { ...fallback, ...parsed }
+    return { ...seedRows(), ...parsed }
   } catch {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(fallback))
-    return fallback
+    const seeded = seedRows()
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded))
+    } catch {
+      // 同上：存储不可用时只返回，不强行落库。
+    }
+    return seeded
   }
-}
-
-let cache: Record<string, EntryRow[]> | null = null
-
-export function allRows(): Record<string, EntryRow[]> {
-  if (cache === null) {
-    cache = readStorage()
-  }
-  return cache
 }
 
 export function listRows(key: string): EntryRow[] {
   return allRows()[key] ?? []
 }
 
-export function saveRows(key: string, rows: EntryRow[]): void {
-  const next = { ...allRows(), [key]: rows }
-  cache = next
-  if (typeof window !== 'undefined' && window.localStorage) {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+// 唯一落库入口：整个数据集一次写入。先写 localStorage，写成功才算数；
+// 写不进去返回 false，内存里也不留半截数据，调用方按失败处理，等于整体回滚。
+export function persistAll(next: Record<string, EntryRow[]>): boolean {
+  if (!hasStorage()) {
+    memoryFallback = next
+    return true
   }
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function saveRows(key: string, rows: EntryRow[]): boolean {
+  return persistAll({ ...allRows(), [key]: rows })
 }
 
 export function resetRows(key: string): EntryRow[] {

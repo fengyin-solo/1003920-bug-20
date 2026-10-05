@@ -75,29 +75,28 @@ import { computed, onMounted, ref } from 'vue'
 
 import {
   downloadEntries,
-  listEntries,
+  loadModulePage,
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
-import type { EntryRow } from '@/data/types'
+import type { EntryRow, ModuleStat } from '@/data/types'
 
 const meta = moduleMeta('engineering')
 const columns = ["项目编号", "隐患点编号", "治理方案", "承建方", "合同金额", "开工日期", "计划工期", "项目状态"]
 const actions = ["启动招标", "开工确认", "申请验收"]
-const statuses = ["待立项", "招标中", "施工中", "已竣工", "待验收"]
-const stats = [{"label": "项目总数", "value": 0}, {"label": "施工中数", "value": 0}, {"label": "待验收数", "value": 0}]
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
 const filterFields = columns.slice(0, 3)
-const statusSummary = computed(() =>
-  statuses.map((status: string) => ({
-    status,
-    count: rows.value.filter((row) => String(row.status) === status).length,
-  })),
-)
+const summary = ref<ModuleStat>({ created: 0, pending: 0, abnormal: 0, byStatus: [] })
+const stats = computed(() => [
+  { label: '登记总量', value: summary.value.created },
+  { label: '未结事项', value: summary.value.pending },
+  { label: '异常量', value: summary.value.abnormal },
+])
+const statusSummary = computed(() => summary.value.byStatus)
 
 function resetFilters() {
   filters.value = {}
@@ -112,22 +111,22 @@ function openCreate() {
   errorMessage.value = '治理工程项目登记入口尚未接入审批流'
 }
 
-function runAction(action: string, row: EntryRow) {
+async function runAction(action: string, row: EntryRow) {
   errorMessage.value = ''
-  const result = applyAction(meta.key, Number(row.id), action)
+  const result = await applyAction(meta.key, Number(row.id), action, String(row.status))
+  reload()
   if (!result.ok) {
     errorMessage.value = result.message
-    return
   }
-  reload()
 }
 
 function reload() {
   errorMessage.value = ''
   try {
-    const payload = listEntries(meta.key, filters.value)
+    const payload = loadModulePage(meta.key, filters.value)
     rows.value = payload.items
     total.value = payload.total
+    summary.value = payload.summary
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '治理工程列表读取失败'
   }

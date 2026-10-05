@@ -69,3 +69,15 @@ npm run build
   `frontend/src/data/seed.ts`。
 - 状态流转只允许在 `local-service.ts` 里改，页面组件不做业务判断。
 - 想回到初始数据：清掉浏览器里 `geohazard-monitor-prevention:entries` 这一项，或调用 `resetModule(模块)`。
+
+## 结算口径
+
+- 每个模块的终态登记在 `modules.ts` 的 `terminalStatuses`：动作把记录推进到终态时，
+  `local-service.ts` 统一结算 `status / pending / abnormal` 三个标记，整个数据集一次落库；
+  写不进去就整体回滚，不留半截数据。
+- 总览卡片、分模块汇总、待办清单（`loadOverview`）和列表页明细加汇总（`loadModulePage`）
+  各自从同一批持久化快照生成，导出（`exportEntries`）读的是同一份落库数据；
+  重复刷新只是按落库标记重算，不会累加。
+- 历史数据保留当时结算的标记，不按新口径重算；只有再次发生状态流转时才按新口径结算该条记录。
+- 多标签页同时结算同一条记录时通过 Web Locks 排队，并对记录状态做乐观校验：
+  只有先拿到锁的请求成功，其余提示记录已被其他终端变更。
