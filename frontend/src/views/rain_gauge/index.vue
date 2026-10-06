@@ -14,7 +14,7 @@
     <div class="stat-row">
       <article v-for="item in stats" :key="item.label" class="stat-card">
         <span class="stat-label">{{ item.label }}</span>
-        <strong class="stat-value">{{ item.value }}</strong>
+        <strong class="stat-value">{{ item.value ?? "—" }}</strong>
       </article>
     </div>
 
@@ -71,67 +71,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { useModulePage } from '@/composables/useModulePage'
 
-import {
-  downloadEntries,
-  listEntries,
-  moduleMeta,
-  runAction as applyAction,
-} from '@/api/local-service'
-import type { EntryRow } from '@/data/types'
-
-const meta = moduleMeta('rain_gauge')
-const columns = ["记录编号", "站点编号", "观测时段", "时段雨量", "日累计雨量", "小时最大雨强", "是否触发预警", "记录状态"]
-const actions = ["提交审核", "触发预警", "标记异常"]
-const statuses = ["已采集", "已审核", "达预警值", "异常值"]
-const stats = [{"label": "雨量站点数", "value": 0}, {"label": "达预警值站次", "value": 0}, {"label": "累计降雨量", "value": 0}]
-
-const rows = ref<EntryRow[]>([])
-const total = ref(0)
-const errorMessage = ref('')
-const filters = ref<Record<string, string>>({})
-const filterFields = columns.slice(0, 3)
-const statusSummary = computed(() =>
-  statuses.map((status: string) => ({
-    status,
-    count: rows.value.filter((row) => String(row.status) === status).length,
-  })),
-)
-
-function resetFilters() {
-  filters.value = {}
-  reload()
-}
-
-function exportRows() {
-  downloadEntries(meta.key)
-}
-
-function openCreate() {
-  errorMessage.value = '雨量记录登记入口尚未接入审批流'
-}
-
-function runAction(action: string, row: EntryRow) {
-  errorMessage.value = ''
-  const result = applyAction(meta.key, Number(row.id), action)
-  if (!result.ok) {
-    errorMessage.value = result.message
-    return
-  }
-  reload()
-}
-
-function reload() {
-  errorMessage.value = ''
-  try {
-    const payload = listEntries(meta.key, filters.value)
-    rows.value = payload.items
-    total.value = payload.total
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '雨量监测列表读取失败'
-  }
-}
-
-onMounted(reload)
+const {
+  meta,
+  columns,
+  actions,
+  rows,
+  total,
+  errorMessage,
+  filters,
+  filterFields,
+  stats,
+  statusSummary,
+  reload,
+  resetFilters,
+  exportRows,
+  openCreate,
+  runAction,
+} = useModulePage('rain_gauge')
 </script>

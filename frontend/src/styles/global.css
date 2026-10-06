@@ -35,3 +35,7 @@ body { margin: 0; background: #f6f8fb; color: #1f2937; }
 .error-text { color: #b42318; }
 .status-legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 10px; font-size: 12px; color: var(--muted); }
 .legend-item { background: #eef2f7; border-radius: 999px; padding: 2px 10px; }
+.todo-panel { margin-top: 18px; }
+.todo-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.todo-head h3 { font-size: 15px; margin: 0; }
+.todo-count { font-size: 12px; color: var(--muted); }

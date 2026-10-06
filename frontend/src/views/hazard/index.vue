@@ -14,7 +14,7 @@
     <div class="stat-row">
       <article v-for="item in stats" :key="item.label" class="stat-card">
         <span class="stat-label">{{ item.label }}</span>
-        <strong class="stat-value">{{ item.value }}</strong>
+        <strong class="stat-value">{{ item.value ?? "—" }}</strong>
       </article>
     </div>
 
@@ -71,67 +71,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { useModulePage } from '@/composables/useModulePage'
 
-import {
-  downloadEntries,
-  listEntries,
-  moduleMeta,
-  runAction as applyAction,
-} from '@/api/local-service'
-import type { EntryRow } from '@/data/types'
-
-const meta = moduleMeta('hazard')
-const columns = ["隐患点编号", "隐患点名称", "灾害类型", "所在乡镇", "经纬度坐标", "威胁户数", "威胁人口", "隐患状态"]
-const actions = ["纳入监测", "启动治理", "申请核销"]
-const statuses = ["在册", "监测中", "已治理", "已核销", "新增"]
-const stats = [{"label": "隐患点总数", "value": 0}, {"label": "监测中数量", "value": 0}, {"label": "已治理数量", "value": 0}]
-
-const rows = ref<EntryRow[]>([])
-const total = ref(0)
-const errorMessage = ref('')
-const filters = ref<Record<string, string>>({})
-const filterFields = columns.slice(0, 3)
-const statusSummary = computed(() =>
-  statuses.map((status: string) => ({
-    status,
-    count: rows.value.filter((row) => String(row.status) === status).length,
-  })),
-)
-
-function resetFilters() {
-  filters.value = {}
-  reload()
-}
-
-function exportRows() {
-  downloadEntries(meta.key)
-}
-
-function openCreate() {
-  errorMessage.value = '隐患点登记入口尚未接入审批流'
-}
-
-function runAction(action: string, row: EntryRow) {
-  errorMessage.value = ''
-  const result = applyAction(meta.key, Number(row.id), action)
-  if (!result.ok) {
-    errorMessage.value = result.message
-    return
-  }
-  reload()
-}
-
-function reload() {
-  errorMessage.value = ''
-  try {
-    const payload = listEntries(meta.key, filters.value)
-    rows.value = payload.items
-    total.value = payload.total
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '隐患点台账列表读取失败'
-  }
-}
-
-onMounted(reload)
+const {
+  meta,
+  columns,
+  actions,
+  rows,
+  total,
+  errorMessage,
+  filters,
+  filterFields,
+  stats,
+  statusSummary,
+  reload,
+  resetFilters,
+  exportRows,
+  openCreate,
+  runAction,
+} = useModulePage('hazard')
 </script>

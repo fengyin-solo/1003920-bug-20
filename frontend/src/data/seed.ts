@@ -1,6 +1,8 @@
 import type { EntryRow } from './types'
 
 // 示例数据：首次打开时播种，之后浏览器里的改动优先，重置才会回到这份。
+// 行上的 pending/abnormal 仅为旧字段占位；播种时 local-store 会按当前结算口径（settlement.ts）
+// 统一重算终态/异常标记并盖口径戳记，因此这份数据的明细标记天然与总览一致。
 export const SEED_ROWS: Record<string, EntryRow[]> = {
   "hazard": [
     {

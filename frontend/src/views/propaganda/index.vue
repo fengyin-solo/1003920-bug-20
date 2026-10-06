@@ -14,7 +14,7 @@
     <div class="stat-row">
       <article v-for="item in stats" :key="item.label" class="stat-card">
         <span class="stat-label">{{ item.label }}</span>
-        <strong class="stat-value">{{ item.value }}</strong>
+        <strong class="stat-value">{{ item.value ?? "—" }}</strong>
       </article>
     </div>
 
@@ -71,67 +71,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { useModulePage } from '@/composables/useModulePage'
 
-import {
-  downloadEntries,
-  listEntries,
-  moduleMeta,
-  runAction as applyAction,
-} from '@/api/local-service'
-import type { EntryRow } from '@/data/types'
-
-const meta = moduleMeta('propaganda')
-const columns = ["活动编号", "宣传主题", "宣传方式", "覆盖村组", "活动日期", "参与人数", "组织人", "活动状态"]
-const actions = ["开展活动", "确认完成", "取消活动"]
-const statuses = ["待开展", "进行中", "已完成", "已取消"]
-const stats = [{"label": "本月活动数", "value": 0}, {"label": "已完成数", "value": 0}, {"label": "覆盖人次", "value": 0}]
-
-const rows = ref<EntryRow[]>([])
-const total = ref(0)
-const errorMessage = ref('')
-const filters = ref<Record<string, string>>({})
-const filterFields = columns.slice(0, 3)
-const statusSummary = computed(() =>
-  statuses.map((status: string) => ({
-    status,
-    count: rows.value.filter((row) => String(row.status) === status).length,
-  })),
-)
-
-function resetFilters() {
-  filters.value = {}
-  reload()
-}
-
-function exportRows() {
-  downloadEntries(meta.key)
-}
-
-function openCreate() {
-  errorMessage.value = '宣传活动登记入口尚未接入审批流'
-}
-
-function runAction(action: string, row: EntryRow) {
-  errorMessage.value = ''
-  const result = applyAction(meta.key, Number(row.id), action)
-  if (!result.ok) {
-    errorMessage.value = result.message
-    return
-  }
-  reload()
-}
-
-function reload() {
-  errorMessage.value = ''
-  try {
-    const payload = listEntries(meta.key, filters.value)
-    rows.value = payload.items
-    total.value = payload.total
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '防灾宣传列表读取失败'
-  }
-}
-
-onMounted(reload)
+const {
+  meta,
+  columns,
+  actions,
+  rows,
+  total,
+  errorMessage,
+  filters,
+  filterFields,
+  stats,
+  statusSummary,
+  reload,
+  resetFilters,
+  exportRows,
+  openCreate,
+  runAction,
+} = useModulePage('propaganda')
 </script>

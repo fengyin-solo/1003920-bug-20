@@ -14,7 +14,7 @@
     <div class="stat-row">
       <article v-for="item in stats" :key="item.label" class="stat-card">
         <span class="stat-label">{{ item.label }}</span>
-        <strong class="stat-value">{{ item.value }}</strong>
+        <strong class="stat-value">{{ item.value ?? "—" }}</strong>
       </article>
     </div>
 
@@ -71,67 +71,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { useModulePage } from '@/composables/useModulePage'
 
-import {
-  downloadEntries,
-  listEntries,
-  moduleMeta,
-  runAction as applyAction,
-} from '@/api/local-service'
-import type { EntryRow } from '@/data/types'
-
-const meta = moduleMeta('rectification')
-const columns = ["任务编号", "验收编号", "整改内容", "责任单位", "整改期限", "整改措施", "复核人", "整改状态"]
-const actions = ["开始整改", "提交复核", "确认复核"]
-const statuses = ["待整改", "整改中", "已整改", "已复核", "逾期未改"]
-const stats = [{"label": "待整改数", "value": 0}, {"label": "整改中数", "value": 0}, {"label": "逾期未改数", "value": 0}]
-
-const rows = ref<EntryRow[]>([])
-const total = ref(0)
-const errorMessage = ref('')
-const filters = ref<Record<string, string>>({})
-const filterFields = columns.slice(0, 3)
-const statusSummary = computed(() =>
-  statuses.map((status: string) => ({
-    status,
-    count: rows.value.filter((row) => String(row.status) === status).length,
-  })),
-)
-
-function resetFilters() {
-  filters.value = {}
-  reload()
-}
-
-function exportRows() {
-  downloadEntries(meta.key)
-}
-
-function openCreate() {
-  errorMessage.value = '整改任务登记入口尚未接入审批流'
-}
-
-function runAction(action: string, row: EntryRow) {
-  errorMessage.value = ''
-  const result = applyAction(meta.key, Number(row.id), action)
-  if (!result.ok) {
-    errorMessage.value = result.message
-    return
-  }
-  reload()
-}
-
-function reload() {
-  errorMessage.value = ''
-  try {
-    const payload = listEntries(meta.key, filters.value)
-    rows.value = payload.items
-    total.value = payload.total
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '整改跟踪列表读取失败'
-  }
-}
-
-onMounted(reload)
+const {
+  meta,
+  columns,
+  actions,
+  rows,
+  total,
+  errorMessage,
+  filters,
+  filterFields,
+  stats,
+  statusSummary,
+  reload,
+  resetFilters,
+  exportRows,
+  openCreate,
+  runAction,
+} = useModulePage('rectification')
 </script>

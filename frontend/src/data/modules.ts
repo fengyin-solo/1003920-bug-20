@@ -1,6 +1,10 @@
 import type { ModuleMeta } from './types'
 
-// 模块元数据由仓库生成时写入：字段、状态、动作、流转目标都在这里，页面不再各自写一遍。
+// 模块元数据由仓库生成时写入：字段、状态、动作、流转目标、结算口径都在这里，页面不再各自写一遍。
+// terminalStatuses：终态（含正常办结与作废/驳回/误报等终止态），不在终态上的行计入「未结事项」。
+// abnormalStatuses：异常态，按「当前状态」判定，与执行了什么动作无关；作废但非异常的状态（如已核销、已取消）不计异常。
+// metricStatuses：与 metrics 一一对应的取数口径；首项固定为 null 表示登记总量，
+//   字符串表示按该状态计数，数组表示命中其中任一状态即计数，其余 null 表示该指标无法由状态推出（页面展示 —）。
 export const MODULES: ModuleMeta[] = [
   {
     key: "hazard",
@@ -12,6 +16,9 @@ export const MODULES: ModuleMeta[] = [
     actions: ["纳入监测", "启动治理", "申请核销"],
     actionTargets: {"纳入监测": "监测中", "启动治理": "已治理", "申请核销": "已核销"},
     metrics: ["隐患点总数", "监测中数量", "已治理数量"],
+    terminalStatuses: ["已治理", "已核销"],
+    abnormalStatuses: [],
+    metricStatuses: [null, "监测中", "已治理"],
   },
   {
     key: "deformation",
@@ -23,6 +30,9 @@ export const MODULES: ModuleMeta[] = [
     actions: ["提交校核", "确认校核", "标记异常"],
     actionTargets: {"提交校核": "待校核", "确认校核": "已校核", "标记异常": "异常值"},
     metrics: ["本月观测次数", "异常记录数", "待校核记录"],
+    terminalStatuses: ["已校核"],
+    abnormalStatuses: ["异常值"],
+    metricStatuses: [null, "异常值", "待校核"],
   },
   {
     key: "crack",
@@ -34,6 +44,9 @@ export const MODULES: ModuleMeta[] = [
     actions: ["记录数据", "标记加速", "确认稳定"],
     actionTargets: {"记录数据": "正常", "标记加速": "加速发展", "确认稳定": "趋于稳定"},
     metrics: ["测点总数", "加速发展数", "正常测点数"],
+    terminalStatuses: ["正常", "趋于稳定", "已修复", "已废弃"],
+    abnormalStatuses: ["加速发展"],
+    metricStatuses: [null, "加速发展", "正常"],
   },
   {
     key: "tilt",
@@ -45,6 +58,9 @@ export const MODULES: ModuleMeta[] = [
     actions: ["提交校核", "确认校核", "触发报警"],
     actionTargets: {"提交校核": "待校核", "确认校核": "已校核", "触发报警": "超限报警"},
     metrics: ["本月观测数", "超限报警数", "待校核数"],
+    terminalStatuses: ["已校核"],
+    abnormalStatuses: ["超限报警"],
+    metricStatuses: [null, "超限报警", "待校核"],
   },
   {
     key: "rain_gauge",
@@ -56,6 +72,9 @@ export const MODULES: ModuleMeta[] = [
     actions: ["提交审核", "触发预警", "标记异常"],
     actionTargets: {"提交审核": "已审核", "触发预警": "达预警值", "标记异常": "异常值"},
     metrics: ["雨量站点数", "达预警值站次", "累计降雨量"],
+    terminalStatuses: ["已审核", "达预警值", "异常值"],
+    abnormalStatuses: ["达预警值", "异常值"],
+    metricStatuses: [null, "达预警值", null],
   },
   {
     key: "threshold",
@@ -67,6 +86,9 @@ export const MODULES: ModuleMeta[] = [
     actions: ["发布生效", "调整阈值", "废止配置"],
     actionTargets: {"发布生效": "已生效", "调整阈值": "已调整", "废止配置": "已废止"},
     metrics: ["阈值配置数", "已生效数", "本月调整数"],
+    terminalStatuses: ["已生效", "已调整", "已废止"],
+    abnormalStatuses: [],
+    metricStatuses: [null, "已生效", "已调整"],
   },
   {
     key: "alarm",
@@ -78,6 +100,9 @@ export const MODULES: ModuleMeta[] = [
     actions: ["确认发布", "登记响应", "解除预警"],
     actionTargets: {"确认发布": "已发布", "登记响应": "已响应", "解除预警": "已解除"},
     metrics: ["本月预警数", "已响应数", "未解除数"],
+    terminalStatuses: ["已解除", "误报"],
+    abnormalStatuses: ["误报"],
+    metricStatuses: [null, "已响应", ["待发布", "已发布", "已响应"]],
   },
   {
     key: "evacuation",
@@ -89,6 +114,9 @@ export const MODULES: ModuleMeta[] = [
     actions: ["签订协议", "完成搬迁", "确认安置"],
     actionTargets: {"签订协议": "已签约", "完成搬迁": "已搬迁", "确认安置": "已安置"},
     metrics: ["需搬迁户数", "已搬迁户数", "已安置户数"],
+    terminalStatuses: ["已安置", "拒绝搬迁"],
+    abnormalStatuses: ["拒绝搬迁"],
+    metricStatuses: [null, "已搬迁", "已安置"],
   },
   {
     key: "patrol",
@@ -100,6 +128,9 @@ export const MODULES: ModuleMeta[] = [
     actions: ["完成巡查", "报告异常", "确认处置"],
     actionTargets: {"完成巡查": "已巡查", "报告异常": "发现异常", "确认处置": "已处置"},
     metrics: ["本月巡查次数", "发现异常数", "待处置数"],
+    terminalStatuses: ["已处置"],
+    abnormalStatuses: ["发现异常"],
+    metricStatuses: [null, "发现异常", ["待巡查", "已巡查", "发现异常"]],
   },
   {
     key: "engineering",
@@ -111,6 +142,9 @@ export const MODULES: ModuleMeta[] = [
     actions: ["启动招标", "开工确认", "申请验收"],
     actionTargets: {"启动招标": "招标中", "开工确认": "施工中", "申请验收": "待验收"},
     metrics: ["项目总数", "施工中数", "待验收数"],
+    terminalStatuses: ["已竣工", "待验收"],
+    abnormalStatuses: [],
+    metricStatuses: [null, "施工中", "待验收"],
   },
   {
     key: "acceptance",
@@ -122,6 +156,9 @@ export const MODULES: ModuleMeta[] = [
     actions: ["启动验收", "确认通过", "要求整改"],
     actionTargets: {"启动验收": "验收中", "确认通过": "验收通过", "要求整改": "需整改"},
     metrics: ["待验收项目", "通过项目数", "整改中项目"],
+    terminalStatuses: ["验收通过", "已驳回"],
+    abnormalStatuses: ["需整改", "已驳回"],
+    metricStatuses: [null, "验收通过", "需整改"],
   },
   {
     key: "rectification",
@@ -133,6 +170,9 @@ export const MODULES: ModuleMeta[] = [
     actions: ["开始整改", "提交复核", "确认复核"],
     actionTargets: {"开始整改": "整改中", "提交复核": "已整改", "确认复核": "已复核"},
     metrics: ["待整改数", "整改中数", "逾期未改数"],
+    terminalStatuses: ["已复核", "逾期未改"],
+    abnormalStatuses: ["逾期未改"],
+    metricStatuses: [null, "整改中", "逾期未改"],
   },
   {
     key: "drill",
@@ -144,6 +184,9 @@ export const MODULES: ModuleMeta[] = [
     actions: ["开始筹备", "实施演练", "提交总结"],
     actionTargets: {"开始筹备": "筹备中", "实施演练": "已实施", "提交总结": "已总结"},
     metrics: ["年度演练次数", "已实施场次", "待筹备计划"],
+    terminalStatuses: ["已总结", "已归档"],
+    abnormalStatuses: [],
+    metricStatuses: [null, "已实施", "待筹备"],
   },
   {
     key: "device",
@@ -155,6 +198,9 @@ export const MODULES: ModuleMeta[] = [
     actions: ["报修设备", "确认修复", "停用设备"],
     actionTargets: {"报修设备": "待维修", "确认修复": "正常运行", "停用设备": "已停用"},
     metrics: ["设备总数", "正常运行数", "待维修数"],
+    terminalStatuses: ["正常运行", "已停用"],
+    abnormalStatuses: ["信号异常", "低电量", "待维修"],
+    metricStatuses: [null, "正常运行", "待维修"],
   },
   {
     key: "report",
@@ -166,6 +212,9 @@ export const MODULES: ModuleMeta[] = [
     actions: ["提交核实", "确认核实", "上报灾情"],
     actionTargets: {"提交核实": "待核实", "确认核实": "已核实", "上报灾情": "已上报"},
     metrics: ["本月速报数", "已核实数", "待上报数"],
+    terminalStatuses: ["已上报", "已归档"],
+    abnormalStatuses: [],
+    metricStatuses: [null, "已核实", ["已录入", "待核实", "已核实"]],
   },
   {
     key: "propaganda",
@@ -177,6 +226,9 @@ export const MODULES: ModuleMeta[] = [
     actions: ["开展活动", "确认完成", "取消活动"],
     actionTargets: {"开展活动": "进行中", "确认完成": "已完成", "取消活动": "已取消"},
     metrics: ["本月活动数", "已完成数", "覆盖人次"],
+    terminalStatuses: ["已完成", "已取消"],
+    abnormalStatuses: [],
+    metricStatuses: [null, "已完成", null],
   },
   {
     key: "contract",
@@ -188,6 +240,9 @@ export const MODULES: ModuleMeta[] = [
     actions: ["暂停合作", "列入黑名单", "恢复正常"],
     actionTargets: {"暂停合作": "暂停合作", "列入黑名单": "列入黑名单", "恢复正常": "正常"},
     metrics: ["单位总数", "正常合作数", "黑名单数"],
+    terminalStatuses: ["正常", "列入黑名单", "已注销"],
+    abnormalStatuses: ["暂停合作", "列入黑名单", "资质过期"],
+    metricStatuses: [null, "正常", "列入黑名单"],
   },
   {
     key: "training",
@@ -199,6 +254,9 @@ export const MODULES: ModuleMeta[] = [
     actions: ["开始授课", "完成授课", "组织考核"],
     actionTargets: {"开始授课": "授课中", "完成授课": "已完成", "组织考核": "已考核"},
     metrics: ["年度培训次数", "累计参训人数", "考核通过率"],
+    terminalStatuses: ["已归档"],
+    abnormalStatuses: [],
+    metricStatuses: [null, null, null],
   },
 ]
 

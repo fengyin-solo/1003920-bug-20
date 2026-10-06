@@ -14,7 +14,7 @@
     <div class="stat-row">
       <article v-for="item in stats" :key="item.label" class="stat-card">
         <span class="stat-label">{{ item.label }}</span>
-        <strong class="stat-value">{{ item.value }}</strong>
+        <strong class="stat-value">{{ item.value ?? "—" }}</strong>
       </article>
     </div>
 
@@ -71,67 +71,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { useModulePage } from '@/composables/useModulePage'
 
-import {
-  downloadEntries,
-  listEntries,
-  moduleMeta,
-  runAction as applyAction,
-} from '@/api/local-service'
-import type { EntryRow } from '@/data/types'
-
-const meta = moduleMeta('threshold')
-const columns = ["阈值编号", "隐患点编号", "监测类型", "注意级阈值", "警示级阈值", "警戒级阈值", "设定人", "生效状态"]
-const actions = ["发布生效", "调整阈值", "废止配置"]
-const statuses = ["草稿", "已生效", "已调整", "已废止"]
-const stats = [{"label": "阈值配置数", "value": 0}, {"label": "已生效数", "value": 0}, {"label": "本月调整数", "value": 0}]
-
-const rows = ref<EntryRow[]>([])
-const total = ref(0)
-const errorMessage = ref('')
-const filters = ref<Record<string, string>>({})
-const filterFields = columns.slice(0, 3)
-const statusSummary = computed(() =>
-  statuses.map((status: string) => ({
-    status,
-    count: rows.value.filter((row) => String(row.status) === status).length,
-  })),
-)
-
-function resetFilters() {
-  filters.value = {}
-  reload()
-}
-
-function exportRows() {
-  downloadEntries(meta.key)
-}
-
-function openCreate() {
-  errorMessage.value = '预警阈值登记入口尚未接入审批流'
-}
-
-function runAction(action: string, row: EntryRow) {
-  errorMessage.value = ''
-  const result = applyAction(meta.key, Number(row.id), action)
-  if (!result.ok) {
-    errorMessage.value = result.message
-    return
-  }
-  reload()
-}
-
-function reload() {
-  errorMessage.value = ''
-  try {
-    const payload = listEntries(meta.key, filters.value)
-    rows.value = payload.items
-    total.value = payload.total
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '预警阈值列表读取失败'
-  }
-}
-
-onMounted(reload)
+const {
+  meta,
+  columns,
+  actions,
+  rows,
+  total,
+  errorMessage,
+  filters,
+  filterFields,
+  stats,
+  statusSummary,
+  reload,
+  resetFilters,
+  exportRows,
+  openCreate,
+  runAction,
+} = useModulePage('threshold')
 </script>

@@ -65,7 +65,22 @@ npm run build
 
 - 每个模块的页面在 `frontend/src/views/<模块>/index.vue`，页面只负责渲染，读写统一走
   `frontend/src/api/local-service.ts`。
-- 字段、状态、动作与流转目标集中在 `frontend/src/data/modules.ts`；示例数据在
+- 字段、状态、动作、流转目标集中在 `frontend/src/data/modules.ts`；示例数据在
   `frontend/src/data/seed.ts`。
 - 状态流转只允许在 `local-service.ts` 里改，页面组件不做业务判断。
 - 想回到初始数据：清掉浏览器里 `geohazard-monitor-prevention:entries` 这一项，或调用 `resetModule(模块)`。
+
+## 结算口径（明细 / 汇总 / 待办 / 导出一致）
+
+- 终态（含正常办结与作废、驳回、误报等终止态）与异常态在 `data/modules.ts` 按模块显式登记，
+  由 `data/settlement.ts` 统一推导：**不在终态上的行计未结；异常只看当前状态，与执行了什么动作无关**。
+- 每次状态流转就是一次结算：按目标状态重算该行的未结/异常标记并盖口径戳记（`RULE_VERSION`），
+  随数据信封（版本号 + 口径版本 + 数据本体）**一次 `setItem` 原子落库**。完成或作废后旧值立即失效，
+  运营概览、列表指标卡、状态图例、关联业务面待办清单与 CSV 导出全部读同一批已落库数据，
+  「重新统计」/重复刷新只读数，不产生新结算、不累加汇总。
+- **历史班次不重算**：旧版本数据迁移后没有口径戳记的行，按其当时的行内标记展示；
+  只有对该行再次执行动作时才按当前口径重新结算，其余历史行保持不变。概览页会提示存在历史口径数据。
+- **并发结算**：`commitSettlement` 先取跨终端互斥锁（带 10 秒 TTL，持有者崩溃可接管），
+  再按版本号做乐观校验；两个终端同时结算只放行一个，版本过期的请求提示刷新；
+  计算抛错或落库失败时整单回滚，版本与数据都不变。其他终端通过 `storage` 事件自动刷新到新批次。
+- 结算逻辑的无浏览器验证脚本：`cd frontend && npm run verify:settlement`。
